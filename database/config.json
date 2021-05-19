@@ -1,0 +1,33 @@
+{
+  "development": {
+    "username": "project_net",
+    "password": "project_net@mhc1",
+    "database": "project_net",
+    "host": "daily-mhc-o.mysql.rds.aliyuncs.com",
+    "dialect": "mysql",
+    "operatorsAliases": false,
+    "underscored": true,
+    "timezone": "+08:00",
+    "freezeTableName": true
+  },
+  "test": {
+    "username": "project_net",
+    "password": "project_net@mhc1",
+    "database": "project_net",
+    "host": "daily-mhc-o.mysql.rds.aliyuncs.com",
+    "operatorsAliases": false,
+    "underscored": true,
+    "timezone": "+08:00",
+    "freezeTableName": true
+  },
+  "production": {
+    "username": "project_net",
+    "password": "project_net@mhc1",
+    "database": "project_net",
+    "host": "daily-mhc-o.mysql.rds.aliyuncs.com",
+    "operatorsAliases": false,
+    "underscored": true,
+    "timezone": "+08:00",
+    "freezeTableName": true
+  }
+}

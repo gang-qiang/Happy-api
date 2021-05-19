@@ -1,0 +1,205 @@
+#!groovy
+
+/**
+ * Runs a command on a remote host using sshpass.
+ *
+ * @param ip the node IP address
+ * @param user the node user name
+ * @param pass the node password
+ * @param command the command to run
+ * @param sshArgs arguments for the ssh command
+ * @return the output of the command
+ */
+def runCmd(ip, user, pass, command, sshArgs = "") {
+    return sh(returnStdout: true, script: "sshpass -p ${pass} ssh ${sshArgs} -oStrictHostKeyChecking=no -l ${user} ${ip} \"${command}\"")
+}
+
+def defineImgTag() {
+    def NAMESPACE = ""
+    def REG_URL = ""
+    if ("${env.JOB_NAME}".contains("front-end")) {
+        def realJobName = "${env.JOB_NAME}".replaceAll("front-end/", "")
+        NAMESPACE = realJobName.split("-")[0]
+    } else {
+        NAMESPACE = "${env.JOB_NAME}".split("-")[0]
+    }
+    if ("${NAMESPACE}" != "pre" && "${NAMESPACE}" != "online") {
+        REG_URL = "reg.haimaiche.net"
+    }else{
+        REG_URL = "reg.maihaoche.com"
+    }
+    def ROLLTAG = "${params.ROLLTAG}"
+    def PROJECT_NAME = "${env.GIT_URL}".substring("${env.GIT_URL}".lastIndexOf("/") + 1, "${env.GIT_URL}".lastIndexOf(".git"))
+    def PROJECT_NAMESPACE = "${env.GIT_URL}".substring("${env.GIT_URL}".lastIndexOf(":") + 1, "${env.GIT_URL}".lastIndexOf("/"))
+    def IMG_TAG
+    if (ROLLTAG) {
+        IMG_TAG = "${REG_URL}/${PROJECT_NAMESPACE}/${PROJECT_NAME}:$ROLLTAG"
+    } else {
+        def COMMIT_SHORT_SHA = "${env.GIT_COMMIT}".toString().substring(0, 8)
+        out = sh(returnStdout: true, script: "git show -s --format=%ct ${env.GIT_COMMIT}")
+        def COMMIT_TIME = out.toString().trim()
+        def FORMAT_BRANCH = "${env.GIT_BRANCH}".replaceAll("origin/", "").replaceAll("/", "_")
+        IMG_TAG = "${REG_URL}/${PROJECT_NAMESPACE}/${PROJECT_NAME}:${NAMESPACE}_${env.BUILD_NUMBER}_${COMMIT_TIME}_${FORMAT_BRANCH}_${COMMIT_SHORT_SHA}"
+    }
+    return IMG_TAG
+}
+
+def defineProjectName() {
+  def jobName = ""
+  if ("${env.JOB_NAME}".contains("front-end")){
+    jobName = "${env.JOB_NAME}".replaceAll("front-end/","")
+  }
+  jobName = jobName.substring(jobName.indexOf("-")+1)
+  return jobName
+}
+
+def getNameSpace() {
+  def NAMESPACE = ""
+  if ("${env.JOB_NAME}".contains("front-end")){
+    def realJobName = "${env.JOB_NAME}".replaceAll("front-end/","")
+    NAMESPACE = realJobName.split("-")[0]
+  }else {
+    NAMESPACE = "${env.JOB_NAME}".split("-")[0]
+  }
+  return NAMESPACE
+}
+
+def getToken() {
+    def TOKEN = "Vp9yz78eFsqhfF"
+    return TOKEN
+}
+
+def getAppLabel() {
+    def appMap = getAppMap()
+    def appLabel = appMap['label']
+    return appLabel
+}
+
+def getCustom() {
+    def CUSTOM = appData['custom']
+    return CUSTOM
+}
+
+
+def appData = [:]
+
+def getAppMap() {
+    def appMap = [:]
+    def projectName = defineProjectName()
+    def get = new URL("https://wildcat.maihaoche.net/app/app.json?app_name=" + projectName).openConnection()
+    def getRC = get.getResponseCode()
+    if (getRC.equals(200)) {
+        def json_str = get.getInputStream().getText()
+        def slurper = new groovy.json.JsonSlurperClassic()
+        def cfg = slurper.parseText(json_str)
+        def code = cfg['success']
+        if (code) {
+            appMap['custom'] = false
+            def app_group = cfg['data']['appGroup']
+            def app_type = cfg['data']['appType']
+            def jvm = cfg['data']['jvm']
+            def acura_need = cfg['data']['acuraNeed']
+            def dubbo_provider = cfg['data']['dubboProvider']
+            def web_provider = cfg['data']['webProvider']
+            def core = cfg['data']['core']
+            if (app_type == 1) {
+                if (web_provider) {
+                    appMap['appType'] = "dubbo+web"
+                } else {
+                    appMap['appType'] = "dubbo"
+                }
+                if (projectName == "hummer" || projectName == "gw-cullinan") {
+                    appMap['custom'] = true
+                }
+            } else if (app_type == 2) {
+                if (dubbo_provider) {
+                    appMap['appType'] = "mvc"
+                } else {
+                    appMap['appType'] = "mvc"
+                    appMap['custom'] = true
+                }
+            }
+
+            if (app_group == "loan") {
+                appMap['label'] = "loan"
+            } else if (app_group == "trade") {
+                appMap['label'] = "trade"
+            } else if (app_group == "tms" || app_group == "wms") {
+                appMap['label'] = "wtms"
+            } else {
+                appMap['label'] = "other"
+            }
+
+            appMap['acuraNeed'] = acura_need
+            appMap['jvm'] = jvm
+            appMap['core'] = core
+        }
+    }
+    appData = appMap
+    return appMap
+}
+
+pipeline {
+    environment {
+        CI_PROJECT_NAME = defineProjectName()
+        IMG_TAG = defineImgTag()
+        NAMESPACE = getNameSpace()
+        TOKEN = getToken()
+    }
+
+    agent {
+        docker {
+            image 'reg.haimaiche.net/library/maven:3.6-docker-git-kube'
+            label 'other'
+            args '-v /home/admin/.m2:/root/.m2 -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+
+    stages {
+        stage("analysis-job") {
+            steps {
+                echo "${env.GIT_BRANCH}"
+            }
+        }
+        stage('docker-job') {
+            steps {
+                script {
+                    if (!params.ROLLTAG) {
+                        if ("${NAMESPACE}" != "pre" && "${NAMESPACE}" != "online") {
+                            REG_URL = "reg.haimaiche.net"
+                        }else{
+                            REG_URL = "reg.maihaoche.com"
+                        }
+                        sh "docker login -u admin -p mhc1234A! ${REG_URL}"
+                        sh "docker build -t ${IMG_TAG} -f Dockerfile ."
+                        sh "docker push ${IMG_TAG}"
+                    }
+                }
+            }
+        }
+        stage('deploy-job') {
+            steps {
+                script {
+                    sh 'sh gitlab-ci/deploy.sh'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            emailext(
+                    subject: "${env.JOB_NAME} - 第${env.BUILD_NUMBER}次构建日志 更新成功",
+                    body: '${SCRIPT, template="email-html.template"}',
+                    recipientProviders: [requestor(), developers()]
+            )
+        }
+        failure {
+            sh "curl \"http://update-fail-rank.haimaiche.net/rank/appConf/buildFailures?envAppName=${env.JOB_NAME}&buildFailureTime=\$(date '+%Y-%m-%d%%20%H:%M:%S')\""
+            emailext(
+                    subject: "${env.JOB_NAME} - 第${env.BUILD_NUMBER}次构建日志 更新失败",
+                    body: '${SCRIPT, template="email-html.template"}',
+                    recipientProviders: [requestor(), developers()]
+            )
+        }
+    }
+}

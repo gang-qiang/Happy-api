@@ -1,0 +1,104 @@
+{
+  "name": "error-monitor",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "egg": {
+    "typescript": true,
+    "declarations": true
+  },
+  "scripts": {
+    "start": "egg-scripts start --title=egg-server-error-monitor-pro",
+    "start:test": "EGG_SERVER_ENV=test npm start",
+    "stop": "egg-scripts stop --title=egg-server-error-monitor",
+    "dev": "egg-bin dev",
+    "debug": "egg-bin debug",
+    "test-local": "egg-bin test",
+    "test": "npm run lint -- --fix && npm run test-local",
+    "cov": "egg-bin cov",
+    "tsc": "ets && tsc -p tsconfig.json",
+    "ci": "npm run tsc",
+    "autod": "autod",
+    "lint": "eslint --ext .js,.ts --format=pretty ./app",
+    "lint:fix": "eslint --fix --ext .js,.ts --format=pretty ./app",
+    "clean": "ets clean",
+    "yapi": "yapi import"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^7.7.1",
+    "@mhc/mhc-helper": "^1.2.3",
+    "axios": "^0.19.2",
+    "basic-auth": "^2.0.1",
+    "bcryptjs": "^2.4.3",
+    "egg": "^2.6.1",
+    "egg-cache": "^0.0.7",
+    "egg-cors": "^2.2.3",
+    "egg-es": "^1.2.2",
+    "egg-scripts": "^2.6.0",
+    "egg-sequelize": "^5.2.1",
+    "egg-validate": "^2.0.2",
+    "eslint-config-egg": "^8.0.1",
+    "ioredis": "^4.24.2",
+    "jsonwebtoken": "^8.5.1",
+    "lodash": "^4.17.15",
+    "module-alias": "^2.2.2",
+    "moment-timezone": "^0.5.33",
+    "mysql2": "^2.1.0",
+    "nodemailer": "^6.5.0",
+    "qiniu": "^7.3.2",
+    "qs": "^6.9.4",
+    "reflect-metadata": "^0.1.13",
+    "sequelize": "^6.3.5"
+  },
+  "devDependencies": {
+    "@mhc/fabric": "^2.2.0",
+    "@types/mocha": "^2.2.40",
+    "@types/node": "^7.0.12",
+    "@types/supertest": "^2.0.0",
+    "autod": "^3.0.1",
+    "autod-egg": "^1.1.0",
+    "egg-bin": "^4.11.0",
+    "egg-ci": "^1.8.0",
+    "egg-mock": "^3.16.0",
+    "egg-swagger-doc": "^2.3.2",
+    "husky": "^4.2.5",
+    "lint-staged": "^10.2.13",
+    "regexpp": "^3.1.0",
+    "sequelize-cli": "^5.5.1",
+    "tslib": "^1.9.0",
+    "typescript": "^3.0.0",
+    "yapi-cli": "^1.5.0"
+  },
+  "engines": {
+    "node": ">=8.9.0"
+  },
+  "ci": {
+    "version": "8"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "eslintIgnore": [
+    "coverage"
+  ],
+  "author": "qiming",
+  "license": "MIT",
+  "_moduleAliases": {
+    "@": ".",
+    "@app": "./app"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{.js,.ts}": [
+      "eslint --fix --format=pretty"
+    ]
+  },
+  "resolutions": {
+    "@typescript-eslint/parser": "4.2.0"
+  }
+}
